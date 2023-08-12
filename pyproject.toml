@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "ts-gps-navigation"
+version = "0.1.0"
+description = ""
+authors = ["David Wang <dwang733@outlook.com>"]
+readme = "README.md"
+packages = [{include = "ts_gps_navigation"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+kaitaistruct = "^0.10"
+clickhouse-cityhash = "^1.0.2.4"
+black = "^23.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
