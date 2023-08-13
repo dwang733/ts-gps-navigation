@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+from units import TsCity
 
 from filesystem import TsFileSystem
 
@@ -9,25 +10,34 @@ game_path = Path(
 mod_path = Path(R"C:\Users\dwang\Documents\Euro Truck Simulator 2\mod")
 
 
+cities: list[TsCity] = []
+
+
 def parse_city_files():
-    # file_path = def_path / "city.sii"
-    # city_sii_file = SiiFile(file_path)
-    # for city_path in city_sii_file.includes:
-    #     print(city_path)
-    #     sii_file = SiiFile(def_path / city_path)
-    #     city = TsCity(sii_file)
     city_files = TsFileSystem.get_files("def", "city")
+    if not city_files:
+        raise FileNotFoundError(
+            "Could not find files in directory 'def/' that contain 'city'"
+        )
+
     for city_file in city_files:
-        print(city_file.path)
-        if city_file is None:
-            raise FileNotFoundError(f"Could not find file 'def/{city_file}'")
+        lines = [line.strip() for line in city_file.read().decode("utf-8").splitlines()]
+        for line in lines:
+            if not line.startswith("@include"):
+                continue
+
+            include_file_path = line.split(" ")[1].strip('"')
+            if not include_file_path.startswith("/"):
+                include_file_path = f"def/{include_file_path}"
+
+            city = TsCity(include_file_path)
+            cities.append(city)
 
 
 def parse_def_files():
     """
     Parse all definition files.
     """
-
     parse_city_files()
     # TODO: parse_country_files()
     # TODO: parse_prefab_files()

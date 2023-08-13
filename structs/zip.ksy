@@ -20,6 +20,9 @@ meta:
   endian: le
   bit-endian: le
 doc: |
+  Note: this is copied directly from Kaitai Struct's format gallery, with one important change:
+  the encoding is CP437 instead of UTF-8.
+
   ZIP is a popular archive file format, introduced in 1989 by Phil Katz
   and originally implemented in PKZIP utility by PKWARE.
 

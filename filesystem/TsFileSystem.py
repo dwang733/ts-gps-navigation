@@ -30,13 +30,13 @@ class TsFileSystem:
         Get files in the file system under the given directory  with an optional filter.
 
         Args:
-            dir_path: The directory path, with no leading or trailing slashes.
+            dir_path: The directory path.
             file_filter: Optional substring that the file must contain to be returned.
 
         Returns:
             A list of files, or None if not found.
         """
-        assert not dir_path.startswith("/") and not dir_path.endswith("/")
+        dir_path = dir_path.strip("/")
         dir_hash: int = CityHash64(dir_path)
         dir = cls._dirs.get(dir_hash)
 
@@ -58,12 +58,12 @@ class TsFileSystem:
         Get a file in the file system.
 
         Args:
-            file_path: The file path, with no leading or trailing slashes.
+            file_path: The file path.
 
         Returns:
             A file, or None if not found.
         """
-        assert not file_path.startswith("/") and not file_path.endswith("/")
+        file_path = file_path.strip("/")
         file_hash: int = CityHash64(file_path)
         file = cls._files.get(file_hash)
         return file
@@ -118,12 +118,12 @@ class TsFileSystem:
             FileNotFoundError: Source file could not be found.
         """
         if not path.exists():
-            raise FileNotFoundError()
+            raise FileNotFoundError(f"Could not find file '{path}'")
 
         # if "MaghrebMap_Model1_03.3_Beta" not in path.name:
         #     return
 
-        print(f"Mounting {path}")
+        # print(f"Mounting {path}")
         f = path.open(mode="rb")
         try:
             TsFileSystem._parse_scs_file(f)
