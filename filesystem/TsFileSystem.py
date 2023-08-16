@@ -3,7 +3,6 @@ from typing import BinaryIO
 
 # SCS uses an old version of CityHash,
 # so we need to use this instead of the cityhash pip package.
-# VSCode also doesn't recognize it as a module, so need to use cast.
 from clickhouse_cityhash.cityhash import CityHash64
 
 from .TsDirectory import TsDirectory
