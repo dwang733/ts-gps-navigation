@@ -11,8 +11,8 @@ class TsCity:
         self.name = ""
         self.localized_name = ""
         self.country = ""
-        self.map_x_offsets: list[int] = []
-        self.map_y_offsets: list[int] = []
+        self.map_x_offsets: list[float] = []
+        self.map_y_offsets: list[float] = []
 
         lines = [line.strip() for line in file.read().decode("utf-8").splitlines()]
         for line in lines:
@@ -21,6 +21,7 @@ class TsCity:
 
             split_parts = [i.strip(' "') for i in line.split(":")]
             key, value = split_parts[0], split_parts[1]
+            value = value.split(" ")[0]
             if key == "city_data":
                 self.unit_name = value
             elif key == "city_name":
@@ -30,6 +31,6 @@ class TsCity:
             elif key == "country":
                 self.country = value
             elif key == "map_x_offsets[]":
-                self.map_x_offsets.append(int(value))
+                self.map_x_offsets.append(float(value))
             elif key == "map_y_offsets[]":
-                self.map_y_offsets.append(int(value))
+                self.map_y_offsets.append(float(value))

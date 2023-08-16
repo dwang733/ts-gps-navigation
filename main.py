@@ -14,24 +14,37 @@ cities: list[TsCity] = []
 
 
 def parse_city_files():
-    city_files = TsFileSystem.get_files("def", "city")
+    city_files = TsFileSystem.get_files("/def/", "city")
     if not city_files:
         raise FileNotFoundError(
-            "Could not find files in directory 'def/' that contain 'city'"
+            "Could not find files in directory '/def/' that contain 'city'."
         )
 
     for city_file in city_files:
-        lines = [line.strip() for line in city_file.read().decode("utf-8").splitlines()]
+        # print(f"city file {city_file.path}")
+        # TODO: Try to determine encoding
+        try:
+            lines = [
+                line.strip() for line in city_file.read().decode("utf-8").splitlines()
+            ]
+        except:
+            lines = [
+                line.strip() for line in city_file.read().decode("cp437").splitlines()
+            ]
         for line in lines:
             if not line.startswith("@include"):
                 continue
 
+            # Path could be absolute or relative to def/.
             include_file_path = line.split(" ")[1].strip('"')
             if not include_file_path.startswith("/"):
-                include_file_path = f"def/{include_file_path}"
+                include_file_path = f"/def/{include_file_path}"
 
             city = TsCity(include_file_path)
             cities.append(city)
+        #     print(include_file_path)
+        #     print(city.name, city.unit_name)
+        # print("-------------------")
 
 
 def parse_def_files():

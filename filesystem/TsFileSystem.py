@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import BinaryIO, cast
+from typing import BinaryIO
 
 # SCS uses an old version of CityHash,
 # so we need to use this instead of the cityhash pip package.
 # VSCode also doesn't recognize it as a module, so need to use cast.
 from clickhouse_cityhash.cityhash import CityHash64
-from kaitaistruct import ValidationNotEqualError
 
-from structs import TsScs, Zip
 from .TsDirectory import TsDirectory
 from .TsFile import TsFile
+from .parsers.ScsFileParser import ScsFileParser
+from .parsers.ZipFileParser import ZipFileParser
 
 
 class TsFileSystem:
@@ -30,25 +30,30 @@ class TsFileSystem:
         Get files in the file system under the given directory  with an optional filter.
 
         Args:
-            dir_path: The directory path.
-            file_filter: Optional substring that the file must contain to be returned.
+            dir_path: The absolute directory path, with a leading slash.
+            file_filter: Optional substring that the file name must contain.
 
         Returns:
             A list of files, or None if not found.
         """
-        dir_path = dir_path.strip("/")
-        dir_hash: int = CityHash64(dir_path)
+        # Ensure consistent path (w/ leading and trailing slashes).
+        if not dir_path.startswith("/"):
+            raise ValueError(f"Directory path '{dir_path}' must be absolute.")
+        if not dir_path.endswith("/"):
+            dir_path += "/"
+
+        # Hash is calculated without leading or trailing slashes.
+        dir_hash: int = CityHash64(dir_path.strip("/\\"))
         dir = cls._dirs.get(dir_hash)
 
         files = []
         for file_name in dir.file_names:
             if file_filter in file_name:
-                file_path = f"{dir_path}/{file_name}" if dir_path else file_name
+                file_path = f"{dir_path}{file_name}" if dir_path else f"/{file_name}"
                 file = cls.get_file(file_path)
                 files.append(file)
 
-                # File names are hashed, we don't know the name beforehand.
-                # Since we got the file path just now, let's fill in the file name.
+                # File names are hashed, so we didn't know the name beforehand.
                 file.path = file_path
         return files
 
@@ -58,14 +63,21 @@ class TsFileSystem:
         Get a file in the file system.
 
         Args:
-            file_path: The file path.
+            file_path: The absolute file path, with a leading slash.
 
         Returns:
             A file, or None if not found.
         """
-        file_path = file_path.strip("/")
-        file_hash: int = CityHash64(file_path)
+        # Ensure consistent path (w/ leading slash).
+        if not file_path.startswith("/"):
+            raise ValueError(f"File path '{file_path}' must be absolute.")
+
+        # Hash is calculated without leading or trailing slashes.
+        file_hash: int = CityHash64(file_path.strip("/\\"))
         file = cls._files.get(file_hash)
+
+        # File names are hashed, so we didn't know the name beforehand.
+        file.path = file_path
         return file
 
     @classmethod
@@ -89,13 +101,11 @@ class TsFileSystem:
             FileNotFoundError: Source directory could not be found.
         """
         if not path.exists():
-            raise FileNotFoundError(f"Could not find directory '{path}'")
+            raise FileNotFoundError(f"Could not find source directory '{path}'.")
 
         # Parse each .scs file.
         scs_files = path.glob("*.scs")
         for file in scs_files:
-            # if file.name != "def.scs":
-            #     continue
             cls.mount_source_file(file)
 
     @classmethod
@@ -118,17 +128,30 @@ class TsFileSystem:
             FileNotFoundError: Source file could not be found.
         """
         if not path.exists():
-            raise FileNotFoundError(f"Could not find file '{path}'")
+            raise FileNotFoundError(f"Could not find source file '{path}'.")
 
-        # if "MaghrebMap_Model1_03.3_Beta" not in path.name:
+        # if "def" not in path.name:
         #     return
 
-        # print(f"Mounting {path}")
         f = path.open(mode="rb")
         try:
-            TsFileSystem._parse_scs_file(f)
-        except ValidationNotEqualError:
-            TsFileSystem._parse_zip_file(f)
+            dirs, files = ScsFileParser.parse(f)
+            print(f"Parsed {path} as .scs file")
+        except AssertionError:
+            dirs, files = ZipFileParser.parse(f)
+            print(f"Parsed {path} as .zip file")
+
+        for dir_hash, dir in dirs.items():
+            existing_dir = cls._dirs.get(dir_hash)
+            if existing_dir:
+                existing_dir.dir_names.update(dir.dir_names)
+                existing_dir.file_names.update(dir.file_names)
+            else:
+                cls._dirs[dir_hash] = dir
+
+        # Overwrite if there is already a file with the same hash.
+        for file_hash, file in files.items():
+            cls._files[file_hash] = file
 
     @classmethod
     def close_file_buffers(cls) -> None:
@@ -137,41 +160,3 @@ class TsFileSystem:
         """
         for f in cls._file_buffers:
             f.close()
-
-    @classmethod
-    def _parse_scs_file(cls, f: BinaryIO):
-        f.seek(0)
-        scs = TsScs.from_io(f)
-
-        entries = cast(list[TsScs.Entry], scs.entries)
-        for entry in entries:
-            if entry.is_directory:
-                # Create directory object if it does not exist.
-                dir = cls._dirs.get(entry.hash)
-                if dir is None:
-                    dir = TsDirectory(entry)
-                    cls._dirs[entry.hash] = dir
-
-                # Use body, unless not compressed, then use original data.
-                body = cast(bytes, entry.body or entry.data)
-                body_lines = [i.decode(encoding="cp437") for i in body.splitlines()]
-
-                for line in body_lines:
-                    if line == "":
-                        continue
-
-                    if line.startswith("*"):
-                        dir.dir_names.append(line[1:])
-                    else:
-                        dir.file_names.append(line)
-            else:
-                # Overwrite if there is already a file with the same hash
-                # Force early binding of entry to closure.
-                cls._files[entry.hash] = TsFile(
-                    entry.hash, lambda e=entry: e.body or e.data
-                )
-
-    @classmethod
-    def _parse_zip_file(cls, f: BinaryIO):
-        f.seek(0)
-        zip = Zip.from_io(f)
