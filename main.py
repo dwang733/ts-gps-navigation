@@ -64,8 +64,11 @@ if __name__ == "__main__":
         TsFileSystem.mount_source_dir(game_path)
         # TsFileSystem.mount_source_dir(mod_path)
         end_time = time.time()
-        print(end_time - start_time)
+        print(f"Mounted source directories in {end_time - start_time:.2f}s.")
 
+        start_time = time.time()
         parse_def_files()
+        end_time = time.time()
+        print(f"Parsed def files in {end_time - start_time:.2f}s.")
     finally:
         TsFileSystem.close_file_buffers()

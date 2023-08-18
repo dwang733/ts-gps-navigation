@@ -8,14 +8,13 @@ from clickhouse_cityhash.cityhash import CityHash64
 
 from filesystem.TsDirectory import TsDirectory
 from filesystem.TsFile import TsFile
-
-_END_OF_CENTRAL_DIR_STRUCT = Struct("<2s2s6xHII2x")
-_CENTRAL_DIR_ENTRY_STRUCT = Struct("<2s2s16xIIHHH8xI")
-_LOCAL_FILE_HEADER_STRUCT = Struct("<2s2s22xHH")
+from utils import StructDataClass
 
 
 @dataclass
-class _EndOfCentralDir:
+class _EndOfCentralDir(StructDataClass):
+    struct = Struct("<2s2s6xHII2x")
+
     magic: str  # 'PK'
     section_type: bytes  # 0x05 0x06
     # disk_of_end_of_central_dir: int  # u2
@@ -33,7 +32,9 @@ class _EndOfCentralDir:
 
 
 @dataclass
-class _CentralDirEntry:
+class _CentralDirEntry(StructDataClass):
+    struct = Struct("<2s2s16xIIHHH8xI")
+
     magic: str  # 'PK'
     section_type: bytes  # 0x01 0x02
     # version_made_by: int  # u2
@@ -61,7 +62,9 @@ class _CentralDirEntry:
 
 
 @dataclass
-class _LocalFileHeader:
+class _LocalFileHeader(StructDataClass):
+    struct = Struct("<2s2s22xHH")
+
     magic: str  # 'PK'
     section_type: bytes  # 0x03 0x04
     # version: int  # u2
@@ -103,19 +106,15 @@ class ZipFileParser:
 
         # Read "End of Central Directory" (EOCD).
         # Assume len_comment is 0, so EOCD has fixed size.
-        eocd_size = _END_OF_CENTRAL_DIR_STRUCT.size
+        eocd_size = _EndOfCentralDir.struct.size
         f.seek(eocd_size * -1, io.SEEK_END)
         eocd_bytes = f.read(eocd_size)
-        eocd = _EndOfCentralDir(*_END_OF_CENTRAL_DIR_STRUCT.unpack(eocd_bytes))
+        eocd = _EndOfCentralDir.parse(eocd_bytes)
 
         f.seek(eocd.ofs_central_dir)
         for i in range(eocd.num_central_dir_entries_total):
             # Read each central directory entry.
-            entry = _CentralDirEntry(
-                *_CENTRAL_DIR_ENTRY_STRUCT.unpack(
-                    f.read(_CENTRAL_DIR_ENTRY_STRUCT.size)
-                )
-            )
+            entry = _CentralDirEntry.parse(f)
 
             # File path is absolute, and has no leading slashes but directories have a trailing slash.
             # e.g. directory name: def/country/
@@ -147,14 +146,10 @@ class ZipFileParser:
                 # If entry is a file, get the body offset, which is after the local file header.
                 prev_pos = f.tell()
                 f.seek(entry.ofs_local_header)
-                header = _LocalFileHeader(
-                    *_LOCAL_FILE_HEADER_STRUCT.unpack(
-                        f.read(_LOCAL_FILE_HEADER_STRUCT.size)
-                    )
-                )
+                header = _LocalFileHeader.parse(f)
                 ofs_body = (
                     entry.ofs_local_header
-                    + _LOCAL_FILE_HEADER_STRUCT.size
+                    + _LocalFileHeader.struct.size
                     + header.len_file_name
                     + header.len_extra
                 )

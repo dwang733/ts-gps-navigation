@@ -5,14 +5,14 @@ from typing import BinaryIO
 
 from filesystem.TsDirectory import TsDirectory
 from filesystem.TsFile import TsFile
-
-_HEADER_STRUCT = Struct("<4sH2x4sII")
-_ENTRY_STRUCT = Struct("<QQI4xII")
+from utils import StructDataClass
 
 
 @dataclass
-class _Header:
-    magic: str  # 'SCS#'
+class _Header(StructDataClass):
+    struct = Struct("<4sH2x4sII")
+
+    magic: bytes  # 'SCS#'
     version: int  # u2
     # salt: int  # u2
     hash_method: str  # 'CITY'
@@ -26,7 +26,9 @@ class _Header:
 
 
 @dataclass
-class _Entry:
+class _Entry(StructDataClass):
+    struct = Struct("<QQI4xII")
+
     hash: int  # u8
     ofs_body: int  # u8
     flags: int  # u4
@@ -57,17 +59,12 @@ class ScsFileParser:
 
         # Read header.
         f.seek(0)
-        header_bytes = f.read(_HEADER_STRUCT.size)
-        header = _Header(*_HEADER_STRUCT.unpack(header_bytes))
+        header = _Header.parse(f)
 
-        # Read all hash entries at once for speed.
+        # Read entries.
         f.seek(header.ofs_entries)
-        entries_bytes = f.read(header.num_entries * _ENTRY_STRUCT.size)
-        unpacked_entry_iter = _ENTRY_STRUCT.iter_unpack(entries_bytes)
-
-        for unpacked_entry in unpacked_entry_iter:
+        for entry in _Entry.iter_parse(f, header.num_entries):
             # Parse each hash entry.
-            entry = _Entry(*unpacked_entry)
             is_directory = entry.flags & 1
 
             if is_directory:
