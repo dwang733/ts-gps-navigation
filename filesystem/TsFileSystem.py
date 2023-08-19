@@ -51,9 +51,6 @@ class TsFileSystem:
                 file_path = f"{dir_path}{file_name}" if dir_path else f"/{file_name}"
                 file = cls.get_file(file_path)
                 files.append(file)
-
-                # File names are hashed, so we didn't know the name beforehand.
-                file.path = file_path
         return files
 
     @classmethod
@@ -129,7 +126,7 @@ class TsFileSystem:
         if not path.exists():
             raise FileNotFoundError(f"Could not find source file '{path}'.")
 
-        # if "def" not in path.name:
+        # if "base.scs" not in path.name:
         #     return
 
         f = path.open(mode="rb")

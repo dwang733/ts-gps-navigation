@@ -1,8 +1,9 @@
 import time
 from pathlib import Path
-from units import TsCity
 
 from filesystem import TsFileSystem
+from sectors import TsSector
+from units import TsCity
 
 game_path = Path(
     R"C:\Program Files (x86)\Steam\steamapps\common\Euro Truck Simulator 2"
@@ -21,7 +22,6 @@ def parse_city_files():
         )
 
     for city_file in city_files:
-        # print(f"city file {city_file.path}")
         # TODO: Try to determine encoding
         try:
             lines = [
@@ -42,9 +42,6 @@ def parse_city_files():
 
             city = TsCity(include_file_path)
             cities.append(city)
-        #     print(include_file_path)
-        #     print(city.name, city.unit_name)
-        # print("-------------------")
 
 
 def parse_def_files():
@@ -56,6 +53,15 @@ def parse_def_files():
     # TODO: parse_prefab_files()
     # TODO: parse_road_look_files()
     # TODO: parse_ferry_connections()
+
+
+def parse_sector_files():
+    # TODO: Read /map folder to get .mbd file to determine folder to read
+    base_files = TsFileSystem.get_files("/map/europe", ".base")
+
+    for base_file in base_files[:1]:
+        print(base_file.path)
+        TsSector(base_file)
 
 
 if __name__ == "__main__":
@@ -70,5 +76,7 @@ if __name__ == "__main__":
         parse_def_files()
         end_time = time.time()
         print(f"Parsed def files in {end_time - start_time:.2f}s.")
+
+        # parse_sector_files()
     finally:
         TsFileSystem.close_file_buffers()

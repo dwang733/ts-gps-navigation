@@ -15,7 +15,7 @@ class _Header(StructDataClass):
     magic: bytes  # 'SCS#'
     version: int  # u2
     # salt: int  # u2
-    hash_method: str  # 'CITY'
+    hash_method: bytes  # 'CITY'
     num_entries: int  # u4
     ofs_entries: int  # u4
 
