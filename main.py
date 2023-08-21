@@ -59,8 +59,11 @@ def parse_sector_files():
     # TODO: Read /map folder to get .mbd file to determine folder to read
     base_files = TsFileSystem.get_files("/map/europe", ".base")
 
-    for base_file in base_files[:1]:
-        print(base_file.path)
+    for base_file in base_files:
+        if "sec+0017+0010" not in base_file.path:
+            continue
+
+        print(f"Parsing .base file: {base_file.path}...")
         TsSector(base_file)
 
 
@@ -72,11 +75,14 @@ if __name__ == "__main__":
         end_time = time.time()
         print(f"Mounted source directories in {end_time - start_time:.2f}s.")
 
-        start_time = time.time()
-        parse_def_files()
-        end_time = time.time()
-        print(f"Parsed def files in {end_time - start_time:.2f}s.")
+        # start_time = time.time()
+        # parse_def_files()
+        # end_time = time.time()
+        # print(f"Parsed def files in {end_time - start_time:.2f}s.")
 
-        # parse_sector_files()
+        start_time = time.time()
+        parse_sector_files()
+        end_time = time.time()
+        print(f"Parsed sector files in {end_time - start_time:.2f}s.")
     finally:
         TsFileSystem.close_file_buffers()
