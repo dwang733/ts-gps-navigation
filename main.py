@@ -60,8 +60,8 @@ def parse_sector_files():
     base_files = TsFileSystem.get_files("/map/europe", ".base")
 
     for base_file in base_files:
-        if "sec+0017+0010" not in base_file.path:
-            continue
+        # if "sec+0017+0010" not in base_file.path:
+        #     continue
 
         print(f"Parsing .base file: {base_file.path}...")
         TsSector(base_file)

@@ -68,9 +68,12 @@ class _SectorHeader(StructDataClass):
 class TsSector:
     def __init__(self, file: TsFile):
         f = io.BytesIO(file.read())
+
+        roads: list[TsRoadItem] = []
         try:
             header = _SectorHeader.parse(f)
 
+            # Parse items.
             for _ in range(header.item_count):
                 item_type_int = int.from_bytes(f.read(4), "little", signed=False)
                 if item_type_int > 48:
@@ -78,8 +81,8 @@ class TsSector:
                 item_type = TsItemEnum(item_type_int)
 
                 f.seek(_ITEM_HEADER_SIZE, io.SEEK_CUR)
-                print(f"Parsing item type '{item_type}'...")
-                print(f"Pos after item header: {hex(f.tell())}")
+                # print(f"Parsing item type '{item_type}'...")
+                # print(f"Pos after item header: {hex(f.tell())}")
                 if item_type == TsItemEnum.TERRAIN:
                     f.seek(0xEA, io.SEEK_CUR)
                     veg_sphere_count = int.from_bytes(f.read(4), "little", signed=False)
@@ -94,7 +97,8 @@ class TsSector:
                     )
                     f.seek(0x04 * building_offset_count, io.SEEK_CUR)
                 elif item_type == TsItemEnum.ROAD:
-                    TsRoadItem.parse(f)
+                    road = TsRoadItem.parse(f)
+                    roads.append(road)
                 elif item_type == TsItemEnum.PREFAB:
                     f.seek(0x08 + 0x08, io.SEEK_CUR)
                     additional_parts_count = int.from_bytes(
@@ -233,8 +237,10 @@ class TsSector:
                     node_count = int.from_bytes(f.read(4), "little", signed=True)
                     f.seek((0x08 * node_count) + 0x04, io.SEEK_CUR)
                 elif item_type == TsItemEnum.CURVE:
-                    f.seek(0x6c, io.SEEK_CUR)
-                    height_offset_count = int.from_bytes(f.read(4), "little", signed=True)
+                    f.seek(0x6C, io.SEEK_CUR)
+                    height_offset_count = int.from_bytes(
+                        f.read(4), "little", signed=True
+                    )
                     f.seek(0x04 * height_offset_count, io.SEEK_CUR)
                 elif item_type == TsItemEnum.CUTSCENE:
                     tag_count = int.from_bytes(f.read(4), "little", signed=True)
@@ -263,6 +269,10 @@ class TsSector:
                     f.seek(0x08 * children_count, io.SEEK_CUR)
                 else:
                     raise ValueError(f"Unknown item type {item_type}")
+
+            # Parse nodes.
+            node_count = int.from_bytes(f.read(4), "little", signed=False)
+            print(node_count)
         finally:
             f.close()
 

@@ -142,11 +142,18 @@ class TsFileSystem:
             if existing_dir:
                 existing_dir.dir_names.update(dir.dir_names)
                 existing_dir.file_names.update(dir.file_names)
+                existing_dir.underlying_paths += dir.underlying_paths
             else:
                 cls._dirs[dir_hash] = dir
 
         # Overwrite if there is already a file with the same hash.
         for file_hash, file in files.items():
+            existing_file = cls._files.get(file_hash)
+            if existing_file:
+                file.underlying_paths = (
+                    existing_file.underlying_paths + file.underlying_paths
+                )
+
             cls._files[file_hash] = file
 
     @classmethod

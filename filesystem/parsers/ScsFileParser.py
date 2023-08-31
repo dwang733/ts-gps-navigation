@@ -73,6 +73,7 @@ class ScsFileParser:
                 # e.g. subdirectory name: country
                 # e.g. subfile name: license_plates.sii
                 dir = dirs.setdefault(entry.hash, TsDirectory())
+                dir.underlying_paths.append(f.name)
                 body = ScsFileParser._read_entry_body(f, entry)
                 body_lines = body.decode(encoding="cp437").splitlines()
 
@@ -90,6 +91,7 @@ class ScsFileParser:
                     entry.hash,
                     lambda f=f, entry=entry: ScsFileParser._read_entry_body(f, entry),
                 )
+                files[entry.hash].underlying_paths.append(f.name)
 
         return dirs, files
 

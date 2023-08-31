@@ -138,6 +138,7 @@ class ZipFileParser:
             # Get the parent directory.
             parent_dir_hash: int = CityHash64(parent_dir_path)
             parent_dir = dirs.setdefault(parent_dir_hash, TsDirectory())
+            parent_dir.underlying_paths.append(f.name)
 
             is_directory = entry.len_body_compressed == 0
             if is_directory:
@@ -162,6 +163,7 @@ class ZipFileParser:
                         f, entry, ofs_body
                     ),
                 )
+                files[file_hash].underlying_paths.append(f.name)
                 parent_dir.file_names.add(file_tail)
 
         return dirs, files
